@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>John Conway's Game of life</title>
+  <style>
+    body {
+      background-color: aquamarine;
+    }
+    .container {
+      margin: 50px auto;
+      text-align: center;
+    }
+    .container > :first-child {
+      margin-bottom: 20px;
+    }
+    .grid {
+      background-color: white;
+      border: 5px solid fuchsia;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div>
+      <button id="tick-btn">tick</button>
+      <button id="play-btn">play</button>
+      <button id="stop-btn">stop</button>
+      <button id="reset-btn">reset</button>
+      <button id="random-btn">random</button>
+    </div>
+    <canvas width="800" height="600" class="grid">
+    </canvas>
+  </div>
+  <script>
+    const WIDTH = 80;
+    const HEIGHT = 60;
+    const CELLS = WIDTH * HEIGHT;
+    let cellWidth;
+    let cellHeight;
+    let values = [];
+    let playInterval = null;
+    let cvs;
+
+    function init() {
+      reset();
+      setRandomValues();
+      const tickBtn = document.querySelector('#tick-btn');
+      tickBtn.onclick = () => tick();
+      const playBtn = document.querySelector('#play-btn');
+      playBtn.onclick = () => play();
+      const stopBtn = document.querySelector('#stop-btn');
+      stopBtn.onclick = () => stop();
+      const resetBtn = document.querySelector('#reset-btn');
+      resetBtn.onclick = () => { reset(); render(); };
+      const randomBtn = document.querySelector('#random-btn');
+      randomBtn.onclick = () => { setRandomValues(); render(); };
+      cvs.canvas.onmousedown = onCanvasClick;
+      cellWidth = Math.round(cvs.canvas.width / WIDTH);
+      cellHeight = Math.round(cvs.canvas.height / HEIGHT);
+      render();
+    }
+
+    function setRandomValues() {
+      values = [];
+      for (let i = 0; i < CELLS; i++) {
+        values.push(Math.random() < 0.5 ? true : false);
+      }
+    }
+
+    function onCanvasClick(event) {
+      const bounds = cvs.canvas.getBoundingClientRect();
+      const x = event.x - bounds.x;
+      const y = event.y - bounds.y;
+      const col = Math.floor(x / cellWidth);
+      const row = Math.floor(y / cellHeight);
+      const idx = WIDTH * row + col;
+      onCellClick(idx);
+    }
+
+    function reset() {
+      const grid = /** @type {HTMLCanvasElement} */ (document.querySelector('.grid'));
+      cvs = grid.getContext('2d');
+      cvs.clearRect(0, 0, cvs.canvas.width, cvs.canvas.height);
+      values = values.map(_ => false);
+    }
+
+    function onCellClick(i) {
+      values[i] = !values[i];
+      render();
+    }
+
+    function render() {
+      cvs.clearRect(0, 0, cvs.canvas.width, cvs.canvas.height);
+      for (let i = 0; i < CELLS; i++) {
+        const v = values[i];
+        const col = i % WIDTH;
+        const row = Math.floor(i / WIDTH);
+        cvs.beginPath();
+        const x = col * cellWidth;
+        const y = row * cellHeight;
+        cvs.fillStyle = v ? '#2f3' : '#fff';
+        cvs.rect(x, y, cellWidth, cellHeight);
+        cvs.fill();
+      }
+    }
+
+    function tick() {
+      const temp = [...values];
+      for (let i = 0; i < values.length; i++) {
+        const aliveNeighbors = countAliveNeighbors(i);
+        const isAlive = values[i];
+        if (isAlive) {
+          if (aliveNeighbors < 2 || aliveNeighbors > 3) {
+            temp[i] = false;
+          }
+        } else {
+          if (aliveNeighbors === 3) {
+            temp[i] = true;
+          }
+        }
+      }
+
+      values = temp;
+      render();
+    }
+
+    function play (delay = 20) {
+      stop();
+      playInterval = setInterval(tick, delay);
+    }
+
+    function stop () {
+      if (playInterval !== null) {
+        clearInterval(playInterval);
+        playInterval = null;
+      }
+    }
+
+    function countAliveNeighbors(idx) {
+      const { ml, ul, bl, mr, ur, br, u, b } = getNeighborIndexes(idx);
+      return (
+        values[ml] +
+        values[ul] +
+        values[bl] +
+        values[mr] +
+        values[br] +
+        values[ur] +
+        values[u] +
+        values[b]
+      );
+    }
+
+    function getNeighborIndexes(idx) {
+      let ml = idx - 1;
+      let mr = idx + 1;
+      const row = Math.floor(idx / 50);
+      const mlRow = Math.floor(ml / 50);
+      const mrRow = Math.floor(mr / 50);
+      const lRowDiff = (row - mlRow) * WIDTH;
+      const rRowDiff = (row - mrRow) * WIDTH;
+
+      let ul = ml - WIDTH;
+      let bl = ml + WIDTH;
+      let ur = mr - WIDTH;
+      let br = mr + WIDTH;
+      let u = idx - WIDTH;
+      let b = idx + WIDTH;
+
+      ml += lRowDiff;
+      ul += lRowDiff;
+      bl += lRowDiff;
+      mr += rRowDiff;
+      ur += rRowDiff;
+      br += rRowDiff;
+
+      if (u < 0) {
+        u += CELLS;
+        ur += CELLS;
+        ul += CELLS;
+      }
+
+      if (b > CELLS) {
+        b -= CELLS;
+        br -= CELLS;
+        bl -= CELLS;
+      }
+
+      return { ml, ul, bl, mr, ur, br, u, b };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => init());
+  </script>
+</body>
+</html>
